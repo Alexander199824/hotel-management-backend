@@ -408,6 +408,7 @@ const verifyResetToken = async (req, res, next) => {
 
 /**
  * Middleware para limitar intentos de login por IP
+ * CORREGIDO: Eliminado keyGenerator personalizado para evitar problema IPv6
  */
 const loginRateLimit = require('express-rate-limit')({
     windowMs: config.security.rateLimitWindowMs,
@@ -419,10 +420,10 @@ const loginRateLimit = require('express-rate-limit')({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    // Función personalizada para generar la clave de rate limiting
-    keyGenerator: (req) => {
-        return req.ip + ':' + (req.body.email || req.body.username || 'unknown');
-    },
+    // CORREGIDO: Eliminado keyGenerator personalizado que causaba problemas con IPv6
+    // keyGenerator: (req) => {
+    //     return req.ip + ':' + (req.body.email || req.body.username || 'unknown');
+    // },
     // Handler cuando se excede el límite
     handler: (req, res) => {
         logger.warn('Rate limit excedido en login', {

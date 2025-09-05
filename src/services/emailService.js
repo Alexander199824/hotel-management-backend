@@ -21,10 +21,11 @@ class EmailService {
 
     /**
      * Inicializa el transportador de nodemailer
+     * CORREGIDO: Cambio createTransporter por createTransport
      */
     async initializeTransporter() {
         try {
-            this.transporter = nodemailer.createTransporter({
+            this.transporter = nodemailer.createTransport({
                 host: config.email.host,
                 port: config.email.port,
                 secure: false, // true para 465, false para otros puertos

@@ -21,7 +21,8 @@ const {
     validateCreateIncident,
     validatePagination,
     validateDateRange,
-    validateUUIDParam
+    validateUUIDParam,
+    handleValidationErrors
 } = require('../middleware/validation');
 
 /**
@@ -96,7 +97,26 @@ router.post('/',
 router.put('/:id',
     authenticateToken,
     requireStaff,
-    validateUUIDParam('id'),
+    [
+        ...validateUUIDParam('id'),
+        require('express-validator').body('title')
+            .optional()
+            .isLength({ min: 5, max: 200 })
+            .withMessage('El título debe tener entre 5 y 200 caracteres'),
+        require('express-validator').body('description')
+            .optional()
+            .isLength({ min: 10, max: 2000 })
+            .withMessage('La descripción debe tener entre 10 y 2000 caracteres'),
+        require('express-validator').body('priority')
+            .optional()
+            .isIn(['low', 'medium', 'high', 'urgent'])
+            .withMessage('Prioridad inválida'),
+        require('express-validator').body('estimated_cost')
+            .optional()
+            .isFloat({ min: 0 })
+            .withMessage('El costo estimado debe ser un número positivo'),
+        handleValidationErrors
+    ],
     incidentController.updateIncident
 );
 
@@ -109,7 +129,15 @@ router.put('/:id',
 router.post('/:id/assign',
     authenticateToken,
     requireReceptionist,
-    validateUUIDParam('id'),
+    [
+        ...validateUUIDParam('id'),
+        require('express-validator').body('assigned_to_user_id')
+            .notEmpty()
+            .withMessage('ID del usuario asignado requerido')
+            .isUUID()
+            .withMessage('ID de usuario debe ser UUID válido'),
+        handleValidationErrors
+    ],
     incidentController.assignIncident
 );
 
@@ -129,12 +157,36 @@ router.post('/:id/start-work',
  * @route   POST /api/incidents/:id/resolve
  * @desc    Resolver una incidencia
  * @access  Private - Staff only (debe ser el asignado o manager)
- * @body    { resolution_description, actual_cost?, materials_used?, hours_worked?, after_photos?, preventive_action?, follow_up_required?, follow_up_date? }
+ * @body    { resolution_description, actual_cost?, materials_used?, hours_worked?, after_photos?, preventive_action? }
  */
 router.post('/:id/resolve',
     authenticateToken,
     requireStaff,
-    validateUUIDParam('id'),
+    [
+        ...validateUUIDParam('id'),
+        require('express-validator').body('resolution_description')
+            .notEmpty()
+            .withMessage('Descripción de resolución requerida')
+            .isLength({ min: 10, max: 2000 })
+            .withMessage('La descripción debe tener entre 10 y 2000 caracteres'),
+        require('express-validator').body('actual_cost')
+            .optional()
+            .isFloat({ min: 0 })
+            .withMessage('El costo real debe ser un número positivo'),
+        require('express-validator').body('hours_worked')
+            .optional()
+            .isFloat({ min: 0 })
+            .withMessage('Las horas trabajadas deben ser un número positivo'),
+        require('express-validator').body('materials_used')
+            .optional()
+            .isArray()
+            .withMessage('Los materiales usados deben ser un array'),
+        require('express-validator').body('after_photos')
+            .optional()
+            .isArray()
+            .withMessage('Las fotos después deben ser un array'),
+        handleValidationErrors
+    ],
     incidentController.resolveIncident
 );
 
@@ -147,7 +199,15 @@ router.post('/:id/resolve',
 router.post('/:id/cancel',
     authenticateToken,
     requireManager,
-    validateUUIDParam('id'),
+    [
+        ...validateUUIDParam('id'),
+        require('express-validator').body('reason')
+            .notEmpty()
+            .withMessage('Razón de cancelación requerida')
+            .isLength({ min: 5, max: 500 })
+            .withMessage('La razón debe tener entre 5 y 500 caracteres'),
+        handleValidationErrors
+    ],
     incidentController.cancelIncident
 );
 
@@ -160,21 +220,42 @@ router.post('/:id/cancel',
 router.post('/:id/follow-up',
     authenticateToken,
     requireStaff,
-    validateUUIDParam('id'),
+    [
+        ...validateUUIDParam('id'),
+        require('express-validator').body('notes')
+            .notEmpty()
+            .withMessage('Notas de seguimiento requeridas')
+            .isLength({ min: 5, max: 1000 })
+            .withMessage('Las notas deben tener entre 5 y 1000 caracteres'),
+        require('express-validator').body('next_follow_up_date')
+            .optional()
+            .isISO8601()
+            .withMessage('Fecha de seguimiento inválida'),
+        handleValidationErrors
+    ],
     incidentController.addFollowUp
 );
 
 /**
- * @route   POST /api/incidents/:id/rating
- * @desc    Agregar calificación de satisfacción
+ * @route   GET /api/incidents/room/:roomId
+ * @desc    Obtener incidencias por habitación
  * @access  Private - Staff only
- * @body    { rating, feedback? }
+ * @query   { include_resolved? }
  */
-router.post('/:id/rating',
+router.get('/room/:roomId',
     authenticateToken,
     requireStaff,
-    validateUUIDParam('id'),
-    incidentController.addSatisfactionRating
+    [
+        require('express-validator').param('roomId')
+            .isUUID()
+            .withMessage('ID de habitación debe ser UUID válido'),
+        require('express-validator').query('include_resolved')
+            .optional()
+            .isBoolean()
+            .withMessage('include_resolved debe ser boolean'),
+        handleValidationErrors
+    ],
+    incidentController.getIncidentsByRoom
 );
 
 module.exports = router;
