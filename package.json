@@ -1,0 +1,124 @@
+{
+  "name": "hotel-mar-azul-backend",
+  "version": "1.0.0",
+  "description": "Sistema de Gestión Hotelera 'Mar Azul' - Backend API desarrollado por Alexander Echeverria",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "dev:debug": "nodemon --inspect server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src/ --ext .js",
+    "lint:fix": "eslint src/ --ext .js --fix",
+    "migrate": "node -e \"require('./src/config/database.js').syncDatabase({force: false})\"",
+    "migrate:fresh": "node -e \"require('./src/config/database.js').syncDatabase({force: true})\"",
+    "seed": "node scripts/seed.js",
+    "logs:clean": "rm -rf logs/*.log",
+    "logs:view": "tail -f logs/combined.log",
+    "backup:db": "node scripts/backup.js",
+    "health": "curl http://localhost:3000/health",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop hotel-mar-azul",
+    "pm2:reload": "pm2 reload hotel-mar-azul",
+    "pm2:logs": "pm2 logs hotel-mar-azul"
+  },
+  "keywords": [
+    "hotel",
+    "management",
+    "system",
+    "reservations",
+    "nodejs",
+    "express",
+    "postgresql",
+    "api",
+    "rest",
+    "backend"
+  ],
+  "author": {
+    "name": "Alexander Echeverria",
+    "email": "alexander.echeverria@email.com",
+    "url": "https://github.com/alexecheverria"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexecheverria/hotel-mar-azul-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alexecheverria/hotel-mar-azul-backend/issues"
+  },
+  "homepage": "https://github.com/alexecheverria/hotel-mar-azul-backend#readme",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "sequelize": "^6.35.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "dotenv": "^16.3.1",
+    "nodemailer": "^6.9.7",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "eslint": "^8.55.0",
+    "eslint-config-node": "^4.1.0",
+    "eslint-plugin-node": "^11.1.0",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "cross-env": "^7.0.3"
+  },
+  "optionalDependencies": {
+    "pm2": "^5.3.0"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src/",
+      "server.js"
+    ],
+    "ext": "js,json",
+    "ignore": [
+      "node_modules/",
+      "logs/",
+      "uploads/",
+      "*.test.js"
+    ],
+    "env": {
+      "NODE_ENV": "development"
+    },
+    "delay": 1000
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "es2021": true
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-console": "warn",
+      "no-unused-vars": "error",
+      "no-undef": "error",
+      "semi": [
+        "error",
+        "always"
+      ],
+      "quotes": [
+        "error",
+        "single"
+      ]
+    }
+  }
+}
