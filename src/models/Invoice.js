@@ -87,9 +87,9 @@ const Invoice = sequelize.define('Invoice', {
         comment: 'Fecha de fin del servicio facturado'
     },
 
-    // Estado de la factura
+    // Estado de la factura - Cambiado de ENUM a STRING
     status: {
-        type: DataTypes.ENUM(Object.values(INVOICE_STATUS)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: INVOICE_STATUS.DRAFT,
         validate: {
@@ -238,9 +238,9 @@ const Invoice = sequelize.define('Invoice', {
         comment: 'Código de moneda ISO 4217'
     },
 
-    // Información de pago
+    // Información de pago - Cambiado de ENUM a STRING
     payment_status: {
-        type: DataTypes.ENUM(Object.values(PAYMENT_STATUS)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: PAYMENT_STATUS.PENDING,
         validate: {

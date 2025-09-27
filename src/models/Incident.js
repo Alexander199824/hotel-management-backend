@@ -102,8 +102,9 @@ const Incident = sequelize.define('Incident', {
         comment: 'Descripción detallada de la incidencia'
     },
 
+    // Tipo, prioridad y estado - Cambiados de ENUM a STRING
     incident_type: {
-        type: DataTypes.ENUM(Object.values(INCIDENT_TYPES)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         validate: {
             isIn: {
@@ -115,7 +116,7 @@ const Incident = sequelize.define('Incident', {
     },
 
     priority: {
-        type: DataTypes.ENUM(Object.values(INCIDENT_PRIORITY)),
+        type: DataTypes.STRING(10),
         allowNull: false,
         defaultValue: INCIDENT_PRIORITY.MEDIUM,
         validate: {
@@ -128,7 +129,7 @@ const Incident = sequelize.define('Incident', {
     },
 
     status: {
-        type: DataTypes.ENUM(Object.values(INCIDENT_STATUS)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: INCIDENT_STATUS.REPORTED,
         validate: {

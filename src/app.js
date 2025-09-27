@@ -225,15 +225,26 @@ const initializeApp = async () => {
             throw new Error('No se pudo conectar a la base de datos');
         }
         
-        // Sincronizar modelos en desarrollo (usar migraciones en producción)
+        // Configuración de reseteo de base de datos (SOLO PARA DESARROLLO)
+        const RESET_DATABASE = process.env.RESET_DATABASE === 'true' || false;
+        
         if (config.server.environment === 'development') {
-            await syncDatabase({ alter: true });
+            if (RESET_DATABASE) {
+                logger.warn('RESETEO DE BASE DE DATOS HABILITADO - Eliminando y recreando tablas...');
+                await syncDatabase({ force: true }); // Elimina y recrea todas las tablas
+                logger.info('Base de datos reseteada completamente');
+            } else {
+                await syncDatabase({ alter: true }); // Solo altera las tablas existentes
+            }
             logger.info('Modelos de base de datos sincronizados');
             
             // Crear usuario administrador por defecto
             const User = require('./models/User');
             await User.createDefaultAdmin();
             logger.info('Usuario administrador verificado');
+        } else {
+            // En producción, usar migraciones en lugar de sync
+            logger.info('Entorno de producción - usando migraciones');
         }
         
         logger.info('Aplicación inicializada correctamente');

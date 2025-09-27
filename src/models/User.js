@@ -113,9 +113,9 @@ const User = sequelize.define('User', {
         comment: 'Número de teléfono del usuario'
     },
 
-    // Rol y permisos
+    // Rol y permisos - Cambiado de ENUM a STRING con validación
     role: {
-        type: DataTypes.ENUM(Object.values(USER_ROLES)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: USER_ROLES.GUEST,
         validate: {

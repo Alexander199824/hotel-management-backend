@@ -39,9 +39,9 @@ const Room = sequelize.define('Room', {
         comment: 'Número único de la habitación'
     },
 
-    // Categoría de la habitación
+    // Categoría de la habitación - Cambiado de ENUM a STRING
     category: {
-        type: DataTypes.ENUM(Object.values(ROOM_CATEGORIES)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         validate: {
             isIn: {
@@ -116,9 +116,9 @@ const Room = sequelize.define('Room', {
         comment: 'Tipo de cama principal'
     },
 
-    // Estado actual de la habitación
+    // Estado actual de la habitación - Cambiado de ENUM a STRING
     status: {
-        type: DataTypes.ENUM(Object.values(ROOM_STATUS)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: ROOM_STATUS.AVAILABLE,
         validate: {

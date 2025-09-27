@@ -146,9 +146,9 @@ const Reservation = sequelize.define('Reservation', {
         comment: 'Total de huéspedes (calculado)'
     },
 
-    // Estado de la reserva
+    // Estado de la reserva - Cambiado de ENUM a STRING
     status: {
-        type: DataTypes.ENUM(Object.values(RESERVATION_STATUS)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: RESERVATION_STATUS.PENDING,
         validate: {
@@ -248,9 +248,9 @@ const Reservation = sequelize.define('Reservation', {
         comment: 'Código de moneda ISO 4217'
     },
 
-    // Información de pago
+    // Información de pago - Cambiado de ENUM a STRING
     payment_status: {
-        type: DataTypes.ENUM(Object.values(PAYMENT_STATUS)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: PAYMENT_STATUS.PENDING,
         validate: {

@@ -40,6 +40,23 @@ const sequelizeConfig = {
         freezeTableName: true, // No pluralizar nombres de tablas
         charset: 'utf8',
         collate: 'utf8_general_ci'
+    },
+    
+    // Configuraciones adicionales para evitar problemas con ENUMs
+    dialectOptions: {
+        ...((config.database.ssl) && {
+            ssl: {
+                require: true,
+                rejectUnauthorized: false
+            }
+        }),
+        keepAlive: true,
+        statement_timeout: 30000,
+        idle_in_transaction_session_timeout: 30000,
+        // Configuración específica para PostgreSQL
+        useUTC: false,
+        dateStrings: true,
+        typeCast: true
     }
 };
 
@@ -88,9 +105,16 @@ const syncDatabase = async (options = {}) => {
         // Por defecto, no hacer drop de tablas existentes
         const syncOptions = {
             force: false, // No recrear tablas existentes
-            alter: config.server.environment === 'development', // Solo alterar en desarrollo
+            alter: false, // No alterar en producción
             ...options
         };
+        
+        // Solo permitir alteraciones en desarrollo
+        if (config.server.environment === 'development') {
+            syncOptions.alter = options.alter !== false;
+        }
+        
+        console.log('Iniciando sincronización de base de datos...', syncOptions);
         
         await sequelize.sync(syncOptions);
         console.log('Sincronización de base de datos completada');
@@ -98,6 +122,37 @@ const syncDatabase = async (options = {}) => {
         return true;
     } catch (error) {
         console.error('Error al sincronizar base de datos:', error.message);
+        console.error('Stack trace:', error.stack);
+        return false;
+    }
+};
+
+/**
+ * Función para resetear completamente la base de datos
+ * SOLO PARA DESARROLLO - Elimina todas las tablas y las recrea
+ */
+const resetDatabase = async () => {
+    if (config.server.environment === 'production') {
+        throw new Error('No se puede resetear la base de datos en producción');
+    }
+    
+    try {
+        console.log('🔥 RESETEANDO BASE DE DATOS - Eliminando todas las tablas...');
+        
+        // Primero eliminar todas las tablas
+        await sequelize.drop();
+        console.log('✅ Todas las tablas eliminadas');
+        
+        // Luego recrear todas las tablas
+        await sequelize.sync({ force: true });
+        console.log('✅ Todas las tablas recreadas');
+        
+        console.log('🎉 Reset de base de datos completado exitosamente');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error durante el reset de base de datos:', error.message);
+        console.error('Stack trace:', error.stack);
         return false;
     }
 };
@@ -132,6 +187,7 @@ module.exports = {
     sequelize,
     testConnection,
     syncDatabase,
+    resetDatabase,
     closeConnection,
     Sequelize // Exportar también la clase para tipos de datos
 };

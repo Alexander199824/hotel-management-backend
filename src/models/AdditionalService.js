@@ -70,9 +70,9 @@ const AdditionalService = sequelize.define('AdditionalService', {
         comment: 'ID del usuario que registró el servicio'
     },
 
-    // Información del servicio
+    // Información del servicio - Cambiado de ENUM a STRING
     service_type: {
-        type: DataTypes.ENUM(Object.values(SERVICE_TYPES)),
+        type: DataTypes.STRING(20),
         allowNull: false,
         validate: {
             isIn: {
@@ -289,7 +289,7 @@ const AdditionalService = sequelize.define('AdditionalService', {
         comment: 'Código de moneda ISO 4217'
     },
 
-    // Estados del servicio
+    // Estados del servicio - Cambiado de ENUM a STRING
     status: {
         type: DataTypes.STRING(20),
         allowNull: false,
