@@ -70,6 +70,10 @@ const config = {
         from: process.env.EMAIL_FROM || 'Hotel Mar Azul <noreply@hotelmarazul.com>'
     },
 
+    googleAppsScript:{
+        endpoint: process.env.GAS_EMAIL_ENDPOINT
+    },
+
     // Configuración de pagos
     payment: {
         stripe: {

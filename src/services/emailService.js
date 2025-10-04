@@ -6,7 +6,7 @@
  * notificaciones, facturas y comunicaciones con huéspedes
  */
 
-const nodemailer = require('nodemailer');
+const fetch = require('node-fetch');
 const config = require('../config/environment');
 const { logger } = require('../utils/logger');
 
@@ -15,36 +15,7 @@ const { logger } = require('../utils/logger');
  */
 class EmailService {
     constructor() {
-        this.transporter = null;
-        this.initializeTransporter();
-    }
-
-    /**
-     * Inicializa el transportador de nodemailer
-     * CORREGIDO: Cambio createTransporter por createTransport
-     */
-    async initializeTransporter() {
-        try {
-            this.transporter = nodemailer.createTransport({
-                host: config.email.host,
-                port: config.email.port,
-                secure: false, // true para 465, false para otros puertos
-                auth: {
-                    user: config.email.auth.user,
-                    pass: config.email.auth.pass
-                },
-                tls: {
-                    rejectUnauthorized: false
-                }
-            });
-
-            // Verificar la conexión
-            await this.transporter.verify();
-            logger.info('Servicio de email inicializado correctamente');
-        } catch (error) {
-            logger.error('Error inicializando servicio de email', error);
-            this.transporter = null;
-        }
+        this.gasEndpoint = config.googleAppsScript.endpoint;
     }
 
     /**
@@ -52,42 +23,26 @@ class EmailService {
      */
     async sendEmail({ to, subject, html, text, attachments = [] }) {
         try {
-            if (!this.transporter) {
-                throw new Error('Transportador de email no disponible');
-            }
-
-            const mailOptions = {
-                from: config.email.from,
-                to: Array.isArray(to) ? to.join(', ') : to,
-                subject,
-                html,
-                text: text || this.stripHtml(html),
-                attachments
-            };
-
-            const result = await this.transporter.sendMail(mailOptions);
-            
-            logger.info('Email enviado exitosamente', {
-                to: mailOptions.to,
-                subject,
-                messageId: result.messageId
+            const response = await fetch(this.gasEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: Array.isArray(to) ? to.join(', ') : to,
+                    subject,
+                    html,
+                    text: text || this.stripHtml(html),
+                    attachments
+                })
             });
 
-            return {
-                success: true,
-                messageId: result.messageId,
-                response: result.response
-            };
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error || 'Error enviando correo');
+
+            logger.info('Email enviado exitosamente', { to, subject });
+            return { success: true };
         } catch (error) {
-            logger.error('Error enviando email', error, {
-                to,
-                subject
-            });
-            
-            return {
-                success: false,
-                error: error.message
-            };
+            logger.error('Error enviando email', error, { to, subject });
+            return { success: false, error: error.message };
         }
     }
 
