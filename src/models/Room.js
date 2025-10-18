@@ -132,20 +132,20 @@ const Room = sequelize.define('Room', {
 
     // Información de precios
     base_price: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        validate: {
-            min: {
-                args: 0,
-                msg: 'El precio base no puede ser negativo'
-            },
-            max: {
-                args: 99999.99,
-                msg: 'El precio base es demasiado alto'
-            }
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    validate: {
+        min: {
+            args: [0],  // ← Cambiar a array
+            msg: 'El precio base no puede ser negativo'
         },
-        comment: 'Precio base por noche en moneda local'
+        max: {
+            args: [99999.99],  // ← También cambiar esto a array
+            msg: 'El precio base es demasiado alto'
+        }
     },
+    comment: 'Precio base por noche en moneda local'
+},
 
     currency: {
         type: DataTypes.STRING(3),
