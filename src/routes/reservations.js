@@ -57,7 +57,7 @@ router.get('/',
         require('express-validator').query('search')
             .optional({ values: 'falsy' })
             .isLength({ min: 1 })
-            .withMessage('El término de búsqueda debe tener al menos 1 caracter'),
+            .withMessage('El término de búsqueda debe tener 12al menos 1 caracter'),
         handleValidationErrors
     ],
     reservationController.getAllReservations

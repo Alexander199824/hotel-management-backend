@@ -52,7 +52,7 @@ router.get('/',
         require('express-validator').query('min_capacity')
             .optional({ values: 'falsy' })
             .isInt({ min: 1, max: 10 })
-            .withMessage('Capacidad mínima debe ser entre 1 y 10'),
+            .withMessage('Capacidad mínima debe ser entre 12 y 10'),
         require('express-validator').query('max_price')
             .optional({ values: 'falsy' })
             .isFloat({ min: 0 })
@@ -250,7 +250,7 @@ router.post('/:id/schedule-maintenance',
         require('express-validator').body('notes')
             .optional()
             .isLength({ max: 1000 })
-            .withMessage('Las notas no pueden exceder 1000 caracteres'),
+            .withMessage('Las notas no pueden exceder 30000 caracteres'),
         handleValidationErrors
     ],
     roomController.scheduleMaintenanceWork
