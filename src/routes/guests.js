@@ -40,27 +40,27 @@ router.get('/',
     [
         ...validatePagination,
         require('express-validator').query('search')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ min: 2 })
             .withMessage('La búsqueda debe tener al menos 2 caracteres'),
         require('express-validator').query('nationality')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ min: 2, max: 3 })
             .withMessage('Código de nacionalidad debe tener 2 o 3 caracteres'),
         require('express-validator').query('vip_status')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('VIP status debe ser boolean'),
         require('express-validator').query('min_stays')
-            .optional()
+            .optional({ values: 'falsy' })
             .isInt({ min: 1 })
             .withMessage('Número mínimo de estadías debe ser positivo'),
         require('express-validator').query('sort_by')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['created_at', 'last_name', 'total_stays', 'total_spent', 'last_stay_date'])
             .withMessage('Campo de ordenamiento inválido'),
         require('express-validator').query('sort_order')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['ASC', 'DESC'])
             .withMessage('Orden debe ser ASC o DESC'),
         handleValidationErrors
@@ -80,11 +80,20 @@ router.post('/',
 );
 
 /**
+ * GET /api/guests/me
+ * Obtener o crear el perfil de huésped del usuario autenticado
+ * Acceso: Guest (solo su propio perfil)
+ */
+router.get('/me',
+    guestController.getOrCreateMyProfile
+);
+
+/**
  * GET /api/guests/search
  * Buscar huéspedes por nombre o email
  * Acceso: Staff
  */
-router.get('/search', 
+router.get('/search',
     requireStaff,
     [
         require('express-validator').query('query')
@@ -127,27 +136,27 @@ router.put('/:id',
     [
         ...validateUUIDParam('id'),
         require('express-validator').body('first_name')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ min: 2, max: 50 })
             .withMessage('El nombre debe tener entre 2 y 50 caracteres')
             .matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/)
             .withMessage('El nombre solo puede contener letras'),
         require('express-validator').body('last_name')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ min: 2, max: 50 })
             .withMessage('El apellido debe tener entre 2 y 50 caracteres')
             .matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/)
             .withMessage('El apellido solo puede contener letras'),
         require('express-validator').body('phone')
-            .optional()
+            .optional({ values: 'falsy' })
             .matches(/^\+?[\d\s\-\(\)]+$/)
             .withMessage('Formato de teléfono inválido'),
         require('express-validator').body('alternative_phone')
-            .optional()
+            .optional({ values: 'falsy' })
             .matches(/^\+?[\d\s\-\(\)]+$/)
             .withMessage('Formato de teléfono alternativo inválido'),
         require('express-validator').body('date_of_birth')
-            .optional()
+            .optional({ values: 'falsy' })
             .isISO8601()
             .withMessage('Fecha de nacimiento inválida')
             .custom(value => {
@@ -157,31 +166,31 @@ router.put('/:id',
                 return true;
             }),
         require('express-validator').body('gender')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['male', 'female', 'other', 'prefer_not_to_say'])
             .withMessage('Género inválido'),
         require('express-validator').body('nationality')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ min: 2, max: 3 })
             .withMessage('Código de nacionalidad debe tener 2 o 3 caracteres'),
         require('express-validator').body('language')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['es', 'en', 'fr', 'de', 'pt'])
             .withMessage('Idioma no soportado'),
         require('express-validator').body('dietary_restrictions')
-            .optional()
+            .optional({ values: 'falsy' })
             .isArray()
             .withMessage('Restricciones dietéticas deben ser un array'),
         require('express-validator').body('special_needs')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ max: 1000 })
             .withMessage('Necesidades especiales no pueden exceder 1000 caracteres'),
         require('express-validator').body('newsletter_subscription')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('Suscripción a newsletter debe ser boolean'),
         require('express-validator').body('marketing_emails')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('Emails de marketing debe ser boolean'),
         handleValidationErrors
@@ -215,7 +224,7 @@ router.post('/:id/promote-vip',
     [
         ...validateUUIDParam('id'),
         require('express-validator').body('reason')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ max: 500 })
             .withMessage('La razón no puede exceder 500 caracteres'),
         handleValidationErrors
@@ -233,7 +242,7 @@ router.post('/:id/remove-vip',
     [
         ...validateUUIDParam('id'),
         require('express-validator').body('reason')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ max: 500 })
             .withMessage('La razón no puede exceder 500 caracteres'),
         handleValidationErrors
@@ -265,7 +274,7 @@ router.post('/:id/blacklist',
  * Remover huésped de lista negra
  * Acceso: Managers
  */
-router.post('/:id/remove-blacklist', 
+router.post('/:id/remove-blacklist',
     requireManager,
     validateUUIDParam('id'),
     guestController.removeFromBlacklist

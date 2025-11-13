@@ -8,7 +8,7 @@
 
 const { logger } = require('../utils/logger');
 const { REPORT_TYPES, EXPORT_FORMATS } = require('../utils/constants');
-const { sequelize } = require('../config/database');
+const { Room, Reservation, AdditionalService, Invoice, Guest, sequelize } = require('../models');
 
 /**
  * Clase principal del servicio de reportes
@@ -29,9 +29,6 @@ class ReportService {
                 endDate,
                 filters
             });
-
-            const Room = require('../models/Room');
-            const Reservation = require('../models/Reservation');
 
             // Obtener total de habitaciones activas
             const totalRooms = await Room.count({ where: { is_active: true } });
@@ -119,15 +116,10 @@ class ReportService {
                 filters
             });
 
-            const Reservation = require('../models/Reservation');
-            const AdditionalService = require('../models/AdditionalService');
-            const Invoice = require('../models/Invoice');
+            // Obtener datos de reservas
+            const reservations = await Reservation.findByDateRange(startDate, endDate);
 
-            const reservations = await Reservation.findByDateRange(
-                startDate,
-                endDate
-            );
-
+            // Obtener servicios adicionales
             const additionalServices = await AdditionalService.findAll({
                 where: {
                     service_date: {
@@ -219,24 +211,204 @@ class ReportService {
     }
 
     /**
+     * Genera reporte de huéspedes
+     */
+    async generateGuestsReport(startDate, endDate, filters = {}) {
+        try {
+            logger.info('Generando reporte de huéspedes', {
+                startDate,
+                endDate,
+                filters
+            });
+
+            // Obtener huéspedes que tuvieron reservas en el período
+            const reservationsInPeriod = await Reservation.findByDateRange(
+                startDate,
+                endDate
+            );
+
+            const guestIds = [...new Set(reservationsInPeriod.map(r => r.guest_id))];
+
+            const guests = await Guest.findAll({
+                where: {
+                    id: {
+                        [sequelize.Sequelize.Op.in]: guestIds
+                    }
+                }
+            });
+
+            // Análisis demográfico
+            const demographicAnalysis = this.analyzeDemographics(guests);
+
+            // Análisis de nacionalidades
+            const nationalityAnalysis = this.analyzeNationalities(guests);
+
+            // Análisis de lealtad
+            const loyaltyAnalysis = this.analyzeLoyalty(guests);
+
+            // Huéspedes frecuentes
+            const frequentGuests = guests
+                .filter(guest => guest.total_stays > 1)
+                .sort((a, b) => b.total_stays - a.total_stays)
+                .slice(0, 20);
+
+            // Análisis de satisfacción (si hay datos disponibles)
+            const satisfactionAnalysis = await this.analyzeSatisfaction(guestIds);
+
+            const reportData = {
+                type: REPORT_TYPES.GUESTS,
+                period: {
+                    start_date: startDate,
+                    end_date: endDate
+                },
+                summary: {
+                    total_unique_guests: guests.length,
+                    new_guests: guests.filter(g => g.total_stays === 1).length,
+                    returning_guests: guests.filter(g => g.total_stays > 1).length,
+                    vip_guests: guests.filter(g => g.vip_status).length,
+                    average_stays_per_guest: guests.length > 0 ?
+                        guests.reduce((sum, g) => sum + g.total_stays, 0) / guests.length : 0
+                },
+                demographic_analysis: demographicAnalysis,
+                nationality_analysis: nationalityAnalysis,
+                loyalty_analysis: loyaltyAnalysis,
+                frequent_guests: frequentGuests.map(guest => ({
+                    id: guest.id,
+                    name: guest.getFullName(),
+                    email: guest.email,
+                    total_stays: guest.total_stays,
+                    total_spent: guest.total_spent,
+                    vip_status: guest.vip_status
+                })),
+                satisfaction_analysis: satisfactionAnalysis,
+                generated_at: new Date(),
+                filters: filters
+            };
+
+            logger.info('Reporte de huéspedes generado exitosamente', {
+                totalGuests: reportData.summary.total_unique_guests,
+                vipGuests: reportData.summary.vip_guests
+            });
+
+            return reportData;
+
+        } catch (error) {
+            logger.error('Error generando reporte de huéspedes', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Genera reporte financiero detallado
+     */
+    async generateFinancialReport(startDate, endDate, filters = {}) {
+        try {
+            logger.info('Generando reporte financiero', {
+                startDate,
+                endDate,
+                filters
+            });
+
+            // Obtener datos de múltiples fuentes
+            const [
+                reservationStats,
+                serviceStats,
+                invoiceStats,
+                incidentCosts
+            ] = await Promise.all([
+                this.getReservationFinancials(startDate, endDate),
+                this.getServiceFinancials(startDate, endDate),
+                this.getInvoiceFinancials(startDate, endDate),
+                this.getIncidentCosts(startDate, endDate)
+            ]);
+
+            // Calcular ingresos totales
+            const totalRevenue = reservationStats.total_revenue + serviceStats.total_revenue;
+
+            // Calcular costos operativos estimados
+            const operatingCosts = {
+                incident_costs: incidentCosts.total_cost,
+                maintenance_estimate: totalRevenue * 0.05, // 5% estimado
+                utilities_estimate: totalRevenue * 0.08, // 8% estimado
+                staff_estimate: totalRevenue * 0.25, // 25% estimado
+                total: 0
+            };
+
+            operatingCosts.total = Object.values(operatingCosts)
+                .filter(cost => typeof cost === 'number')
+                .reduce((sum, cost) => sum + cost, 0);
+
+            // Calcular beneficio bruto estimado
+            const grossProfit = totalRevenue - operatingCosts.total;
+            const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+
+            // Análisis de flujo de caja
+            const cashFlowAnalysis = await this.analyzeCashFlow(startDate, endDate);
+
+            const reportData = {
+                type: REPORT_TYPES.FINANCIAL,
+                period: {
+                    start_date: startDate,
+                    end_date: endDate
+                },
+                revenue_summary: {
+                    accommodation_revenue: reservationStats.total_revenue,
+                    services_revenue: serviceStats.total_revenue,
+                    total_revenue: totalRevenue,
+                    taxes_collected: reservationStats.total_taxes + serviceStats.total_taxes
+                },
+                cost_summary: operatingCosts,
+                profitability: {
+                    gross_profit: grossProfit,
+                    profit_margin: Math.round(profitMargin * 100) / 100,
+                    revenue_per_guest: reservationStats.guest_count > 0 ?
+                        totalRevenue / reservationStats.guest_count : 0
+                },
+                cash_flow: cashFlowAnalysis,
+                payment_analysis: {
+                    total_invoiced: invoiceStats.total_invoiced,
+                    total_paid: invoiceStats.total_paid,
+                    outstanding_balance: invoiceStats.total_invoiced - invoiceStats.total_paid,
+                    collection_rate: invoiceStats.total_invoiced > 0 ?
+                        (invoiceStats.total_paid / invoiceStats.total_invoiced) * 100 : 0
+                },
+                key_metrics: {
+                    average_daily_rate: reservationStats.adr,
+                    revenue_per_available_room: reservationStats.revpar,
+                    cost_per_occupied_room: reservationStats.occupied_rooms > 0 ?
+                        operatingCosts.total / reservationStats.occupied_rooms : 0
+                },
+                generated_at: new Date(),
+                filters: filters
+            };
+
+            logger.info('Reporte financiero generado exitosamente', {
+                totalRevenue: reportData.revenue_summary.total_revenue,
+                grossProfit: reportData.profitability.gross_profit
+            });
+
+            return reportData;
+
+        } catch (error) {
+            logger.error('Error generando reporte financiero', error);
+            throw error;
+        }
+    }
+
+    /**
      * Calcula ocupación diaria
      */
     async calculateDailyOccupancy(startDate, endDate, totalRooms) {
-        const Reservation = require('../models/Reservation');
-        const dailyStats = [];
-
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-
-        for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
-            const dayStart = new Date(date);
-            const dayEnd = new Date(date);
-            dayEnd.setHours(23, 59, 59, 999);
-
-            const reservationsOnDay = await Reservation.count({
+        try {
+            // ✅ OPTIMIZADO: Una sola consulta para todas las reservas
+            const reservations = await Reservation.findAll({
                 where: {
-                    check_in_date: { [sequelize.Sequelize.Op.lte]: dayEnd },
-                    check_out_date: { [sequelize.Sequelize.Op.gt]: dayStart },
+                    check_out_date: {
+                        [sequelize.Sequelize.Op.gte]: startDate
+                    },
+                    check_in_date: {
+                        [sequelize.Sequelize.Op.lte]: endDate
+                    },
                     status: {
                         [sequelize.Sequelize.Op.in]: [
                             'confirmed',
@@ -244,21 +416,43 @@ class ReportService {
                             'checked_out'
                         ]
                     }
-                }
+                },
+                attributes: ['check_in_date', 'check_out_date'],
+                raw: true
             });
 
-            const occupancyRate =
-                totalRooms > 0 ? (reservationsOnDay / totalRooms) * 100 : 0;
+            // Preparar estructura para contar ocupación por día
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const dailyStats = [];
 
-            dailyStats.push({
-                date: new Date(date).toISOString().split('T')[0],
-                occupied_rooms: reservationsOnDay,
-                available_rooms: totalRooms - reservationsOnDay,
-                occupancy_rate: Math.round(occupancyRate * 100) / 100
-            });
+            // Iterar por cada día
+            for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+                const currentDate = new Date(date).toISOString().split('T')[0];
+                const currentDateTime = new Date(currentDate);
+
+                // Contar reservas que ocupan esta fecha (en memoria, no en DB)
+                const reservationsOnDay = reservations.filter(res => {
+                    const checkIn = new Date(res.check_in_date);
+                    const checkOut = new Date(res.check_out_date);
+                    return checkIn <= currentDateTime && checkOut > currentDateTime;
+                }).length;
+
+                const occupancyRate = totalRooms > 0 ? (reservationsOnDay / totalRooms) * 100 : 0;
+
+                dailyStats.push({
+                    date: currentDate,
+                    occupied_rooms: reservationsOnDay,
+                    available_rooms: totalRooms - reservationsOnDay,
+                    occupancy_rate: Math.round(occupancyRate * 100) / 100
+                });
+            }
+
+            return dailyStats;
+        } catch (error) {
+            logger.error('Error calculando ocupación diaria', error);
+            return [];
         }
-
-        return dailyStats;
     }
 
     /**
@@ -267,13 +461,13 @@ class ReportService {
     async getOccupancyByCategory(startDate, endDate) {
         try {
             const query = `
-                SELECT 
+                SELECT
                     r.category,
                     COUNT(DISTINCT r.id) AS total_rooms,
                     COUNT(DISTINCT res.id) AS occupied_reservations,
                     ROUND(
-                        ((COUNT(DISTINCT res.id)::numeric / COUNT(DISTINCT r.id)) * 100), 2
-                    ) AS occupancy_rate
+                        (COUNT(DISTINCT res.id)::numeric / NULLIF(COUNT(DISTINCT r.id), 0)) * 100, 2
+                    ) as occupancy_rate
                 FROM rooms r
                 LEFT JOIN reservations res ON r.id = res.room_id 
                     AND res.check_in_date <= $2 
@@ -465,79 +659,6 @@ class ReportService {
         return Object.values(servicePerformance)
             .sort((a, b) => b.revenue - a.revenue)
             .slice(0, 10);
-    }
-
-        /**
-     * ✅ NUEVO: Genera reporte de huéspedes
-     */
-    async generateGuestsReport(startDate, endDate, filters = {}) {
-        try {
-            logger.info('Generando reporte de huéspedes', {
-                startDate,
-                endDate,
-                filters
-            });
-
-            const Guest = require('../models/Guest');
-            const Reservation = require('../models/Reservation');
-
-            // Obtener huéspedes creados en el rango
-            const guests = await Guest.findAll({
-                where: {
-                    created_at: {
-                        [Op.between]: [startDate, endDate]
-                    },
-                    ...(filters.is_active !== undefined
-                        ? { is_active: filters.is_active }
-                        : {})
-                },
-                include: [
-                    {
-                        model: Reservation,
-                        as: 'reservations',
-                        attributes: ['id', 'status', 'check_in_date', 'check_out_date']
-                    }
-                ]
-            });
-
-            const totalGuests = guests.length;
-            const vipGuests = guests.filter((g) => g.is_vip).length;
-            const activeGuests = guests.filter((g) => g.is_active).length;
-
-            const reportData = {
-                type: REPORT_TYPES.GUESTS,
-                period: { start_date: startDate, end_date: endDate },
-                summary: {
-                    total_guests: totalGuests,
-                    active_guests: activeGuests,
-                    vip_guests: vipGuests,
-                    total_reservations: guests.reduce(
-                        (sum, g) => sum + g.reservations.length,
-                        0
-                    )
-                },
-                guests_list: guests.map((g) => ({
-                    id: g.id,
-                    full_name: `${g.first_name} ${g.last_name}`,
-                    email: g.email,
-                    phone: g.phone,
-                    is_vip: g.is_vip,
-                    total_reservations: g.reservations.length
-                })),
-                generated_at: new Date(),
-                filters
-            };
-
-            logger.info('Reporte de huéspedes generado exitosamente', {
-                totalGuests,
-                vipGuests
-            });
-
-            return reportData;
-        } catch (error) {
-            logger.error('Error generando reporte de huéspedes', error);
-            throw error;
-        }
     }
 
     /** Conversión a CSV */

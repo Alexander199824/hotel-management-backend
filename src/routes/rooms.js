@@ -33,32 +33,32 @@ const {
  * Obtener todas las habitaciones con filtros
  * Acceso: Público (con autenticación opcional para más detalles)
  */
-router.get('/', 
+router.get('/',
     optionalAuth,  // Autenticación opcional
     [
         ...validatePagination,
         require('express-validator').query('status')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['available', 'occupied', 'cleaning', 'maintenance', 'out_of_order'])
             .withMessage('Estado de habitación inválido'),
         require('express-validator').query('category')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['standard', 'deluxe', 'suite', 'presidential'])
             .withMessage('Categoría de habitación inválida'),
         require('express-validator').query('floor')
-            .optional()
+            .optional({ values: 'falsy' })
             .isInt({ min: 1, max: 50 })
             .withMessage('Piso debe ser un número entre 1 y 50'),
         require('express-validator').query('min_capacity')
-            .optional()
+            .optional({ values: 'falsy' })
             .isInt({ min: 1, max: 10 })
             .withMessage('Capacidad mínima debe ser entre 1 y 10'),
         require('express-validator').query('max_price')
-            .optional()
+            .optional({ values: 'falsy' })
             .isFloat({ min: 0 })
             .withMessage('Precio máximo debe ser un número positivo'),
         require('express-validator').query('available_only')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('available_only debe ser boolean'),
         handleValidationErrors

@@ -10,6 +10,7 @@ const { catchAsync } = require('../middleware/errorHandler');
 const { logger } = require('../utils/logger');
 const { REPORT_TYPES, EXPORT_FORMATS } = require('../utils/constants');
 const reportService = require('../services/reportService');
+const { Incident, Room, User } = require('../models');
 
 /**
  * Genera reporte de ocupación del hotel
@@ -292,14 +293,14 @@ const generateIncidentsReport = catchAsync(async (req, res) => {
         },
         include: [
             {
-                model: require('../models/Room'),
+                model: Room,
                 as: 'room',
                 attributes: ['id', 'room_number', 'category'],
                 required: false
             },
             {
-                model: require('../models/User'),
-                as: 'reported_by_user',
+                model: User,
+                as: 'reportedBy',
                 attributes: ['id', 'first_name', 'last_name'],
                 required: false
             }
@@ -325,7 +326,7 @@ const generateIncidentsReport = catchAsync(async (req, res) => {
         incidents: incidents.map(incident => ({
             ...incident.getSummary(),
             room: incident.room,
-            reported_by: incident.reported_by_user
+            reported_by: incident.reportedBy
         })),
         cost_analysis: include_costs === 'true' ? {
             by_type: this.calculateCostsByType(incidents),
@@ -443,7 +444,6 @@ const generateCustomReport = catchAsync(async (req, res) => {
                     break;
 
                 case 'incidents_count':
-                    const Incident = require('../models/Incident');
                     const incidentStats = await Incident.getStats(start_date, end_date);
                     reportData.metrics.incidents_count = incidentStats;
                     break;
@@ -514,8 +514,8 @@ const getDashboard = catchAsync(async (req, res) => {
                 startDate.toISOString().split('T')[0],
                 endDate.toISOString().split('T')[0]
             ),
-            require('../models/Room').getOccupancyStats(),
-            require('../models/Incident').getStats(
+            Room.getOccupancyStats(),
+            Incident.getStats(
                 startDate.toISOString().split('T')[0],
                 endDate.toISOString().split('T')[0]
             )
@@ -549,7 +549,7 @@ const getDashboard = catchAsync(async (req, res) => {
                 revenue_by_day: salesData.daily_revenue?.slice(-7) || [], // Últimos 7 días
                 guest_satisfaction: 4.2 // Simulado
             },
-            alerts: this.generateAlerts(roomStats, incidentStats, occupancyData),
+            alerts: generateAlerts(roomStats, incidentStats, occupancyData),
             generated_at: new Date()
         };
 

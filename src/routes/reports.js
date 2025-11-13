@@ -44,7 +44,7 @@ router.get('/',
 router.get('/dashboard', 
     [
         require('express-validator').query('period')
-            .optional()
+            .optional({ values: 'falsy' })
             .isInt({ min: 1, max: 365 })
             .withMessage('Período debe ser entre 1 y 365 días'),
         handleValidationErrors
@@ -61,15 +61,15 @@ router.get('/occupancy',
     [
         ...validateDateRange,
         require('express-validator').query('status')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled'])
             .withMessage('Estado de reserva inválido'),
         require('express-validator').query('category')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['standard', 'deluxe', 'suite', 'presidential'])
             .withMessage('Categoría de habitación inválida'),
         require('express-validator').query('export_format')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['json', 'csv', 'pdf', 'excel'])
             .withMessage('Formato de exportación inválido'),
         handleValidationErrors
@@ -86,15 +86,15 @@ router.get('/sales',
     [
         ...validateDateRange,
         require('express-validator').query('include_services')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('include_services debe ser boolean'),
         require('express-validator').query('service_type')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['restaurant', 'spa', 'transport', 'laundry', 'room_service', 'minibar', 'parking', 'wifi'])
             .withMessage('Tipo de servicio inválido'),
         require('express-validator').query('export_format')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['json', 'csv', 'pdf', 'excel'])
             .withMessage('Formato de exportación inválido'),
         handleValidationErrors
@@ -111,19 +111,19 @@ router.get('/guests',
     [
         ...validateDateRange,
         require('express-validator').query('nationality')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ min: 2, max: 3 })
             .withMessage('Código de nacionalidad debe tener 2 o 3 caracteres'),
         require('express-validator').query('vip_only')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('vip_only debe ser boolean'),
         require('express-validator').query('include_demographics')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('include_demographics debe ser boolean'),
         require('express-validator').query('export_format')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['json', 'csv', 'pdf', 'excel'])
             .withMessage('Formato de exportación inválido'),
         handleValidationErrors
@@ -141,15 +141,15 @@ router.get('/financial',
     [
         ...validateDateRange,
         require('express-validator').query('include_projections')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('include_projections debe ser boolean'),
         require('express-validator').query('currency')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ min: 3, max: 3 })
             .withMessage('Código de moneda debe tener 3 caracteres'),
         require('express-validator').query('export_format')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['json', 'csv', 'pdf', 'excel'])
             .withMessage('Formato de exportación inválido'),
         handleValidationErrors
@@ -166,23 +166,23 @@ router.get('/incidents',
     [
         ...validateDateRange,
         require('express-validator').query('incident_type')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['maintenance', 'cleaning', 'technical', 'security', 'other'])
             .withMessage('Tipo de incidencia inválido'),
         require('express-validator').query('priority')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['low', 'medium', 'high', 'urgent'])
             .withMessage('Prioridad inválida'),
         require('express-validator').query('status')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['reported', 'in_progress', 'resolved', 'cancelled'])
             .withMessage('Estado de incidencia inválido'),
         require('express-validator').query('include_costs')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('include_costs debe ser boolean'),
         require('express-validator').query('export_format')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['json', 'csv', 'pdf', 'excel'])
             .withMessage('Formato de exportación inválido'),
         handleValidationErrors
@@ -233,11 +233,11 @@ router.post('/custom',
                 return true;
             }),
         require('express-validator').body('grouping')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['daily', 'weekly', 'monthly'])
             .withMessage('Agrupación debe ser daily, weekly o monthly'),
         require('express-validator').body('export_format')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['json', 'csv', 'pdf', 'excel'])
             .withMessage('Formato de exportación inválido'),
         handleValidationErrors

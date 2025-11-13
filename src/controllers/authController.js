@@ -6,7 +6,7 @@
  * recuperación de contraseña y gestión de sesiones
  */
 
-const User = require('../models/User');
+const { User, Guest } = require('../models');
 const { generateToken } = require('../middleware/auth');
 const { catchAsync } = require('../middleware/errorHandler');
 const { logger } = require('../utils/logger');
@@ -102,6 +102,23 @@ const login = catchAsync(async (req, res) => {
     // Generar token JWT
     const token = generateToken(user.id, user.role);
 
+    // Si el usuario es un huésped, buscar su guest_id
+    const userData = user.getPublicData();
+    if (user.role === USER_ROLES.GUEST) {
+        const guest = await Guest.findOne({
+            where: { email: user.email },
+            attributes: ['id']
+        });
+
+        if (guest) {
+            userData.guest_id = guest.id;
+            logger.info('Guest ID agregado al perfil del usuario', {
+                userId: user.id,
+                guestId: guest.id
+            });
+        }
+    }
+
     logger.auth('Login exitoso', user.id, {
         email: user.email,
         role: user.role,
@@ -112,7 +129,7 @@ const login = catchAsync(async (req, res) => {
         success: true,
         message: 'Login exitoso',
         data: {
-            user: user.getPublicData(),
+            user: userData,
             token,
             expires_in: config.jwt.expiresIn
         }
@@ -337,30 +354,35 @@ const requestPasswordReset = catchAsync(async (req, res) => {
     // Crear URL de reset
     const resetUrl = `${config.server.frontendUrl}/reset-password/${resetToken}`;
 
-    // Enviar email de recuperación
-    try {
-        await emailService.sendPasswordReset(user, resetToken, resetUrl);
-        
-        logger.auth('Email de recuperación enviado', user.id, {
-            email,
-            resetToken
-        });
-    } catch (error) {
-        // Si falla el envío del email, limpiar token
-        user.password_reset_token = null;
-        user.password_reset_expires = null;
-        await user.save();
-        
-        logger.error('Error enviando email de recuperación', error, {
-            userId: user.id,
-            email
-        });
-        
-        return res.status(500).json({
-            success: false,
-            message: 'Error enviando email de recuperación'
-        });
-    }
+    // Enviar email de recuperación - DESHABILITADO
+    // try {
+    //     await emailService.sendPasswordReset(user, resetToken, resetUrl);
+    //
+    //     logger.auth('Email de recuperación enviado', user.id, {
+    //         email,
+    //         resetToken
+    //     });
+    // } catch (error) {
+    //     // Si falla el envío del email, limpiar token
+    //     user.password_reset_token = null;
+    //     user.password_reset_expires = null;
+    //     await user.save();
+    //
+    //     logger.error('Error enviando email de recuperación', error, {
+    //         userId: user.id,
+    //         email
+    //     });
+    //
+    //     return res.status(500).json({
+    //         success: false,
+    //         message: 'Error enviando email de recuperación'
+    //     });
+    // }
+
+    logger.auth('Token de recuperación generado (email deshabilitado)', user.id, {
+        email,
+        resetToken
+    });
 
     res.json(successResponse);
 });

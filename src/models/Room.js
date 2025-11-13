@@ -109,7 +109,7 @@ const Room = sequelize.define('Room', {
         defaultValue: 'individual',
         validate: {
             isIn: {
-                args: [['individual', 'doble', 'queen', 'king', 'sofa_cama']],
+                args: [['individual', 'single', 'doble', 'double', 'queen', 'king', 'sofa_cama', 'sofa_bed']],
                 msg: 'Tipo de cama inválido'
             }
         },
@@ -132,20 +132,20 @@ const Room = sequelize.define('Room', {
 
     // Información de precios
     base_price: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
-    validate: {
-        min: {
-            args: [0],  // ← Cambiar a array
-            msg: 'El precio base no puede ser negativo'
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        validate: {
+            min: {
+                args: [0.01],
+                msg: 'El precio base debe ser mayor a cero'
+            },
+            max: {
+                args: [99999.99],
+                msg: 'El precio base es demasiado alto'
+            }
         },
-        max: {
-            args: [99999.99],  // ← También cambiar esto a array
-            msg: 'El precio base es demasiado alto'
-        }
+        comment: 'Precio base por noche en moneda local'
     },
-    comment: 'Precio base por noche en moneda local'
-},
 
     currency: {
         type: DataTypes.STRING(3),

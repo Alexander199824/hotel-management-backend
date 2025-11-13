@@ -33,12 +33,14 @@ const handleSequelizeValidationError = (error) => {
         message: err.message,
         value: err.value
     }));
-    
-    return new AppError(
+
+    const appError = new AppError(
         'Errores de validación de datos',
         400,
         true
     );
+    appError.validationErrors = errors;
+    return appError;
 };
 
 /**
@@ -157,7 +159,7 @@ const sendErrorResponse = (err, req, res) => {
     }
     
     // Error detallado para desarrollo
-    res.status(err.statusCode || 500).json({
+    const responseError = {
         success: false,
         status: err.status || 'error',
         message: err.message,
@@ -169,7 +171,14 @@ const sendErrorResponse = (err, req, res) => {
         body: req.body,
         params: req.params,
         query: req.query
-    });
+    };
+
+    // Incluir errores de validación si existen
+    if (err.validationErrors) {
+        responseError.validationErrors = err.validationErrors;
+    }
+
+    res.status(err.statusCode || 500).json(responseError);
 };
 
 /**

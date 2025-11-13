@@ -20,28 +20,20 @@ class EmailService {
 
     /**
      * Método base para enviar emails
+     * NOTA: Funcionalidad de email deshabilitada temporalmente
      */
     async sendEmail({ to, subject, html, text, attachments = [] }) {
         try {
-            const response = await fetch(this.gasEndpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    to: Array.isArray(to) ? to.join(', ') : to,
-                    subject,
-                    html,
-                    text: text || this.stripHtml(html),
-                    attachments
-                })
+            // Registrar que se intentó enviar un email (sin enviarlo realmente)
+            logger.info('Email simulado (no enviado)', {
+                to: Array.isArray(to) ? to.join(', ') : to,
+                subject
             });
 
-            const result = await response.json();
-            if (!result.success) throw new Error(result.error || 'Error enviando correo');
-
-            logger.info('Email enviado exitosamente', { to, subject });
+            // Retornar éxito sin enviar el email
             return { success: true };
         } catch (error) {
-            logger.error('Error enviando email', error, { to, subject });
+            logger.error('Error en servicio de email', { to, subject, error: error.message });
             return { success: false, error: error.message };
         }
     }

@@ -100,19 +100,19 @@ router.put('/:id',
     [
         ...validateUUIDParam('id'),
         require('express-validator').body('title')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ min: 5, max: 200 })
             .withMessage('El título debe tener entre 5 y 200 caracteres'),
         require('express-validator').body('description')
-            .optional()
+            .optional({ values: 'falsy' })
             .isLength({ min: 10, max: 2000 })
             .withMessage('La descripción debe tener entre 10 y 2000 caracteres'),
         require('express-validator').body('priority')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['low', 'medium', 'high', 'urgent'])
             .withMessage('Prioridad inválida'),
         require('express-validator').body('estimated_cost')
-            .optional()
+            .optional({ values: 'falsy' })
             .isFloat({ min: 0 })
             .withMessage('El costo estimado debe ser un número positivo'),
         handleValidationErrors
@@ -170,19 +170,19 @@ router.post('/:id/resolve',
             .isLength({ min: 10, max: 2000 })
             .withMessage('La descripción debe tener entre 10 y 2000 caracteres'),
         require('express-validator').body('actual_cost')
-            .optional()
+            .optional({ values: 'falsy' })
             .isFloat({ min: 0 })
             .withMessage('El costo real debe ser un número positivo'),
         require('express-validator').body('hours_worked')
-            .optional()
+            .optional({ values: 'falsy' })
             .isFloat({ min: 0 })
             .withMessage('Las horas trabajadas deben ser un número positivo'),
         require('express-validator').body('materials_used')
-            .optional()
+            .optional({ values: 'falsy' })
             .isArray()
             .withMessage('Los materiales usados deben ser un array'),
         require('express-validator').body('after_photos')
-            .optional()
+            .optional({ values: 'falsy' })
             .isArray()
             .withMessage('Las fotos después deben ser un array'),
         handleValidationErrors
@@ -228,7 +228,7 @@ router.post('/:id/follow-up',
             .isLength({ min: 5, max: 1000 })
             .withMessage('Las notas deben tener entre 5 y 1000 caracteres'),
         require('express-validator').body('next_follow_up_date')
-            .optional()
+            .optional({ values: 'falsy' })
             .isISO8601()
             .withMessage('Fecha de seguimiento inválida'),
         handleValidationErrors
@@ -250,7 +250,7 @@ router.get('/room/:roomId',
             .isUUID()
             .withMessage('ID de habitación debe ser UUID válido'),
         require('express-validator').query('include_resolved')
-            .optional()
+            .optional({ values: 'falsy' })
             .isBoolean()
             .withMessage('include_resolved debe ser boolean'),
         handleValidationErrors

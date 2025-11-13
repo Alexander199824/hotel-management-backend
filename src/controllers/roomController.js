@@ -6,13 +6,10 @@
  * consulta, creación, actualización, gestión de estado y disponibilidad
  */
 
-const Room = require('../models/Room');
-const Reservation = require('../models/Reservation');
-const Incident = require('../models/Incident');
+const { Room, Reservation, Incident, sequelize } = require('../models');
 const { catchAsync } = require('../middleware/errorHandler');
 const { logger } = require('../utils/logger');
 const { ROOM_STATUS, ROOM_CATEGORIES, PAGINATION } = require('../utils/constants');
-const { sequelize } = require('../config/database');
 
 /**
  * Obtiene todas las habitaciones con filtros y paginación

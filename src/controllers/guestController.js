@@ -6,13 +6,10 @@
  * registro, consulta, actualización, historial y análisis demográfico
  */
 
-const Guest = require('../models/Guest');
-const Reservation = require('../models/Reservation');
-const AdditionalService = require('../models/AdditionalService');
+const { Guest, Reservation, AdditionalService, sequelize } = require('../models');
 const { catchAsync } = require('../middleware/errorHandler');
 const { logger } = require('../utils/logger');
 const { PAGINATION } = require('../utils/constants');
-const { sequelize } = require('../config/database');
 
 /**
  * Obtiene todos los huéspedes con filtros y paginación
@@ -702,10 +699,80 @@ function calculateFavoriteCategory(reservations) {
         return acc;
     }, {});
 
-    return Object.keys(categoryCount).reduce((a, b) => 
+    return Object.keys(categoryCount).reduce((a, b) =>
         categoryCount[a] > categoryCount[b] ? a : b
     );
 }
+
+/**
+ * Obtener o crear el perfil de huésped del usuario autenticado
+ */
+const getOrCreateMyProfile = catchAsync(async (req, res) => {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Obtener información del usuario
+    const { User } = require('../models');
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+        return res.status(404).json({
+            success: false,
+            message: 'Usuario no encontrado'
+        });
+    }
+
+    // Buscar si ya existe un guest con el email del usuario
+    let guest = await Guest.findOne({
+        where: { email: user.email }
+    });
+
+    // Si no existe, crearlo automáticamente
+    if (!guest) {
+        logger.info('Creando perfil de huésped automáticamente para usuario', {
+            userId: user.id,
+            email: user.email
+        });
+
+        try {
+            // Generar número de documento único usando primeros 8 caracteres del UUID
+            const shortId = user.id.substring(0, 8).toUpperCase();
+
+            guest = await Guest.create({
+                first_name: user.first_name,
+                last_name: user.last_name,
+                email: user.email,
+                phone: user.phone || '+502 0000-0000', // Placeholder si no tiene teléfono
+                document_type: 'other',
+                document_number: `USR-${shortId}`, // Usar primeros 8 caracteres del UUID (12 caracteres total)
+                document_country: 'GT'
+            });
+
+            logger.info('Perfil de huésped creado exitosamente', {
+                guestId: guest.id,
+                userId: user.id
+            });
+        } catch (createError) {
+            logger.error('Error al crear perfil de huésped automáticamente', {
+                userId: user.id,
+                error: createError.message,
+                stack: createError.stack
+            });
+            return res.status(500).json({
+                success: false,
+                message: 'Error al crear perfil de huésped: ' + createError.message
+            });
+        }
+    }
+
+    res.json({
+        success: true,
+        message: 'Perfil de huésped obtenido exitosamente',
+        data: {
+            guest: guest
+        }
+    });
+});
 
 module.exports = {
     getAllGuests,
@@ -718,5 +785,6 @@ module.exports = {
     removeVIPStatus,
     addToBlacklist,
     removeFromBlacklist,
-    getGuestStats
+    getGuestStats,
+    getOrCreateMyProfile
 };

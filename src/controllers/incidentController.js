@@ -6,14 +6,11 @@
  * reporte, asignación, seguimiento, resolución y notificaciones
  */
 
-const Incident = require('../models/Incident');
-const Room = require('../models/Room');
-const User = require('../models/User');
+const { Incident, Room, User, sequelize } = require('../models');
 const { catchAsync } = require('../middleware/errorHandler');
 const { logger } = require('../utils/logger');
 const { INCIDENT_STATUS, INCIDENT_PRIORITY, INCIDENT_TYPES, PAGINATION, USER_ROLES } = require('../utils/constants');
 const emailService = require('../services/emailService');
-const { sequelize } = require('../config/database');
 
 /**
  * Obtiene todas las incidencias con filtros y paginación
@@ -109,18 +106,18 @@ const getAllIncidents = catchAsync(async (req, res) => {
             },
             {
                 model: User,
-                as: 'reported_by_user',
+                as: 'reportedBy',
                 attributes: ['id', 'first_name', 'last_name', 'role']
             },
             {
                 model: User,
-                as: 'assigned_to_user',
+                as: 'assignedTo',
                 attributes: ['id', 'first_name', 'last_name', 'role'],
                 required: false
             },
             {
                 model: User,
-                as: 'resolved_by_user',
+                as: 'resolvedBy',
                 attributes: ['id', 'first_name', 'last_name'],
                 required: false
             }
@@ -172,18 +169,18 @@ const getIncidentById = catchAsync(async (req, res) => {
             },
             {
                 model: User,
-                as: 'reported_by_user',
+                as: 'reportedBy',
                 attributes: ['id', 'first_name', 'last_name', 'role', 'email']
             },
             {
                 model: User,
-                as: 'assigned_to_user',
+                as: 'assignedTo',
                 attributes: ['id', 'first_name', 'last_name', 'role', 'email'],
                 required: false
             },
             {
                 model: User,
-                as: 'resolved_by_user',
+                as: 'resolvedBy',
                 attributes: ['id', 'first_name', 'last_name'],
                 required: false
             }
@@ -282,7 +279,7 @@ const createIncident = catchAsync(async (req, res) => {
             },
             {
                 model: User,
-                as: 'reported_by_user',
+                as: 'reportedBy',
                 attributes: ['id', 'first_name', 'last_name']
             }
         ]
@@ -773,9 +770,15 @@ async function notifyStaffOfNewIncident(incident) {
 
         const staffEmails = staffUsers.map(user => user.email);
 
-        if (staffEmails.length > 0) {
-            await emailService.sendIncidentNotification(incident, staffEmails);
-        }
+        // Enviar notificación de incidencia - DESHABILITADO
+        // if (staffEmails.length > 0) {
+        //     await emailService.sendIncidentNotification(incident, staffEmails);
+        // }
+
+        logger.info('Notificación de incidencia (email deshabilitado)', {
+            incidentId: incident.id,
+            staffEmails: staffEmails.length
+        });
     } catch (error) {
         logger.error('Error enviando notificación de incidencia', error);
     }

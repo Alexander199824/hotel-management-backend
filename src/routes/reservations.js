@@ -37,23 +37,27 @@ router.use(authenticateToken);
  * Obtener todas las reservas con filtros y paginación
  * Acceso: Staff
  */
-router.get('/', 
+router.get('/',
     requireStaff,
     [
         ...validatePagination,
         ...validateDateRange,
         require('express-validator').query('status')
-            .optional()
+            .optional({ values: 'falsy' })
             .isIn(['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show'])
             .withMessage('Estado de reserva inválido'),
         require('express-validator').query('guest_id')
-            .optional()
+            .optional({ values: 'falsy' })
             .isUUID()
             .withMessage('ID de huésped debe ser UUID válido'),
         require('express-validator').query('room_id')
-            .optional()
+            .optional({ values: 'falsy' })
             .isUUID()
             .withMessage('ID de habitación debe ser UUID válido'),
+        require('express-validator').query('search')
+            .optional({ values: 'falsy' })
+            .isLength({ min: 1 })
+            .withMessage('El término de búsqueda debe tener al menos 1 caracter'),
         handleValidationErrors
     ],
     reservationController.getAllReservations

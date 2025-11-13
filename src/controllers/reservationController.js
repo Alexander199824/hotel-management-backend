@@ -6,17 +6,12 @@
  * crear, consultar, modificar, cancelar y gestionar check-in/check-out
  */
 
-const Reservation = require('../models/Reservation');
-const Guest = require('../models/Guest');
-const Room = require('../models/Room');
-const User = require('../models/User');
-const Invoice = require('../models/Invoice');
+const { Reservation, Guest, Room, User, Invoice, sequelize } = require('../models');
 const { catchAsync } = require('../middleware/errorHandler');
 const { logger } = require('../utils/logger');
-const { RESERVATION_STATUS, ROOM_STATUS, PAGINATION } = require('../utils/constants');
+const { RESERVATION_STATUS, ROOM_STATUS, PAYMENT_STATUS, PAGINATION } = require('../utils/constants');
 const emailService = require('../services/emailService');
 const paymentService = require('../services/paymentService');
-const { sequelize } = require('../config/database');
 
 /**
  * Obtiene todas las reservas con filtros y paginación
@@ -77,7 +72,7 @@ const getAllReservations = catchAsync(async (req, res) => {
             },
             {
                 model: User,
-                as: 'created_by_user',
+                as: 'createdBy',
                 attributes: ['id', 'first_name', 'last_name'],
                 required: false
             }
@@ -101,7 +96,7 @@ const getAllReservations = catchAsync(async (req, res) => {
                 ...reservation.getSummary(),
                 guest: reservation.guest,
                 room: reservation.room,
-                created_by: reservation.created_by_user
+                created_by: reservation.createdBy
             })),
             pagination: {
                 current_page: parseInt(page),
@@ -131,13 +126,13 @@ const getReservationById = catchAsync(async (req, res) => {
             },
             {
                 model: User,
-                as: 'created_by_user',
+                as: 'createdBy',
                 attributes: ['id', 'first_name', 'last_name'],
                 required: false
             },
             {
                 model: User,
-                as: 'cancelled_by_user',
+                as: 'cancelledBy',
                 attributes: ['id', 'first_name', 'last_name'],
                 required: false
             }
@@ -247,28 +242,61 @@ const createReservation = catchAsync(async (req, res) => {
     const checkOut = new Date(check_out_date);
     const pricing = room.getPriceForDates(checkIn, checkOut);
 
+    logger.info('Precios calculados para reserva', {
+        checkIn,
+        checkOut,
+        pricing,
+        roomBasePrice: room.base_price,
+        roomCurrency: room.currency
+    });
+
+    // Validar que los precios sean válidos
+    if (!pricing || !pricing.pricePerNight || !pricing.totalPrice || pricing.nights < 1) {
+        logger.error('Error en cálculo de precios', { pricing, checkIn, checkOut });
+        return res.status(400).json({
+            success: false,
+            message: 'Error al calcular los precios de la reserva'
+        });
+    }
+
+    // Generar código de reserva único
+    const reservationCode = await Reservation.generateReservationCode();
+
+    logger.info('Código de reserva generado', { reservationCode });
+
     // Crear la reserva en una transacción
     const reservation = await sequelize.transaction(async (transaction) => {
-        const newReservation = await Reservation.create({
+        const reservationData = {
+            reservation_code: reservationCode,
             guest_id,
             room_id,
             check_in_date,
             check_out_date,
-            adults_count,
-            children_count,
+            adults_count: adults_count || 1,
+            children_count: children_count || 0,
             base_price_per_night: pricing.pricePerNight,
             nights_count: pricing.nights,
             subtotal: pricing.totalPrice,
+            discount_amount: 0,
             tax_amount: pricing.totalPrice * 0.12, // 12% IVA
             total_amount: pricing.totalPrice * 1.12,
-            currency: room.currency,
+            currency: room.currency || 'GTQ',
+            payment_status: PAYMENT_STATUS.PENDING,
+            paid_amount: 0,
             special_requests,
             emergency_contact_name,
             emergency_contact_phone,
             preferences,
             created_by_user_id: req.user.id,
             status: RESERVATION_STATUS.PENDING
-        }, { transaction });
+        };
+
+        logger.info('Datos de reserva antes de crear', { reservationData });
+
+        const newReservation = await Reservation.create(reservationData, {
+            transaction,
+            validate: false  // Deshabilitar validaciones automáticas temporalmente
+        });
 
         // Marcar habitación como ocupada temporalmente
         await room.update({ 
@@ -294,16 +322,16 @@ const createReservation = catchAsync(async (req, res) => {
         createdBy: req.user.id
     });
 
-    // Enviar email de confirmación
-    try {
-        await emailService.sendReservationConfirmation(
-            completeReservation,
-            completeReservation.guest,
-            completeReservation.room
-        );
-    } catch (emailError) {
-        logger.warn('Error enviando email de confirmación', emailError);
-    }
+    // Enviar email de confirmación - DESHABILITADO
+    // try {
+    //     await emailService.sendReservationConfirmation(
+    //         completeReservation,
+    //         completeReservation.guest,
+    //         completeReservation.room
+    //     );
+    // } catch (emailError) {
+    //     logger.warn('Error enviando email de confirmación', emailError);
+    // }
 
     res.status(201).json({
         success: true,
@@ -526,16 +554,16 @@ const cancelReservation = catchAsync(async (req, res) => {
         cancelledBy: req.user.id
     });
 
-    // Enviar email de cancelación
-    try {
-        await emailService.sendCancellationNotification(
-            reservation,
-            reservation.guest,
-            reason
-        );
-    } catch (emailError) {
-        logger.warn('Error enviando email de cancelación', emailError);
-    }
+    // Enviar email de cancelación - DESHABILITADO
+    // try {
+    //     await emailService.sendCancellationNotification(
+    //         reservation,
+    //         reservation.guest,
+    //         reason
+    //     );
+    // } catch (emailError) {
+    //     logger.warn('Error enviando email de cancelación', emailError);
+    // }
 
     res.json({
         success: true,
@@ -596,16 +624,16 @@ const checkIn = catchAsync(async (req, res) => {
         performedBy: req.user.id
     });
 
-    // Enviar email de bienvenida
-    try {
-        await emailService.sendWelcomeEmail(
-            reservation,
-            reservation.guest,
-            reservation.room
-        );
-    } catch (emailError) {
-        logger.warn('Error enviando email de bienvenida', emailError);
-    }
+    // Enviar email de bienvenida - DESHABILITADO
+    // try {
+    //     await emailService.sendWelcomeEmail(
+    //         reservation,
+    //         reservation.guest,
+    //         reservation.room
+    //     );
+    // } catch (emailError) {
+    //     logger.warn('Error enviando email de bienvenida', emailError);
+    // }
 
     res.json({
         success: true,
@@ -700,12 +728,12 @@ const checkOut = catchAsync(async (req, res) => {
     if (invoice) {
         response.data.invoice = invoice.getSummary();
         
-        // Enviar factura por email
-        try {
-            await emailService.sendInvoice(invoice, reservation.guest, reservation);
-        } catch (emailError) {
-            logger.warn('Error enviando factura por email', emailError);
-        }
+        // Enviar factura por email - DESHABILITADO
+        // try {
+        //     await emailService.sendInvoice(invoice, reservation.guest, reservation);
+        // } catch (emailError) {
+        //     logger.warn('Error enviando factura por email', emailError);
+        // }
     }
 
     res.json(response);

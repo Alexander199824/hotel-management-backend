@@ -169,7 +169,13 @@ const validateCreateRoom = [
     body('beds_count')
         .isInt({ min: 1, max: 5 })
         .withMessage('El número de camas debe ser entre 1 y 5'),
-    
+
+    body('bed_type')
+        .notEmpty()
+        .withMessage('Tipo de cama requerido')
+        .isIn(['individual', 'single', 'doble', 'double', 'queen', 'king', 'sofa_cama', 'sofa_bed'])
+        .withMessage('Tipo de cama inválido'),
+
     body('base_price')
         .isFloat({ min: 0 })
         .withMessage('El precio base debe ser un número positivo'),
@@ -215,12 +221,16 @@ const validateUpdateRoom = [
  */
 const validateCreateReservation = [
     body('guest_id')
+        .notEmpty()
+        .withMessage('ID de huésped es requerido')
         .isUUID()
-        .withMessage('ID de huésped inválido'),
-    
+        .withMessage('ID de huésped inválido - debe ser un UUID válido'),
+
     body('room_id')
+        .notEmpty()
+        .withMessage('ID de habitación es requerido')
         .isUUID()
-        .withMessage('ID de habitación inválido'),
+        .withMessage('ID de habitación inválido - debe ser un UUID válido'),
     
     body('check_in_date')
         .isISO8601()
@@ -406,40 +416,40 @@ const validateCreateIncident = [
  */
 const validatePagination = [
     query('page')
-        .optional()
+        .optional({ values: 'falsy' })
         .isInt({ min: 1 })
         .withMessage('El número de página debe ser mayor a 0'),
-    
+
     query('limit')
-        .optional()
+        .optional({ values: 'falsy' })
         .isInt({ min: 1, max: 100 })
         .withMessage('El límite debe ser entre 1 y 100'),
-    
+
     handleValidationErrors
 ];
 
 const validateDateRange = [
     query('start_date')
-        .optional()
+        .optional({ values: 'falsy' })
         .isISO8601()
         .withMessage('Fecha de inicio inválida'),
-    
+
     query('end_date')
-        .optional()
+        .optional({ values: 'falsy' })
         .isISO8601()
         .withMessage('Fecha de fin inválida')
         .custom((value, { req }) => {
             if (req.query.start_date && value) {
                 const startDate = new Date(req.query.start_date);
                 const endDate = new Date(value);
-                
+
                 if (endDate <= startDate) {
                     throw new Error('La fecha de fin debe ser posterior a la fecha de inicio');
                 }
             }
             return true;
         }),
-    
+
     handleValidationErrors
 ];
 
